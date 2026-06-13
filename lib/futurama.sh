@@ -93,6 +93,21 @@ fut_persona() {
     calculon)
       FUT_NAME="Calculon"; FUT_GLYPH="◈"; FUT_C256=141; FUT_C16=35
       FUT_QUOTEKEY=default;   FUT_TAG="acting!" ;;
+    morbo)
+      FUT_NAME="Morbo"; FUT_GLYPH="☢"; FUT_C256=46; FUT_C16=32
+      FUT_QUOTEKEY=default;   FUT_TAG="watch the skies" ;;
+    linda)
+      FUT_NAME="Linda van Schoonhoven"; FUT_GLYPH="◍"; FUT_C256=223; FUT_C16=33
+      FUT_QUOTEKEY=default;   FUT_TAG="...back to you" ;;
+    nixon)
+      FUT_NAME="Richard Nixon's Head"; FUT_GLYPH="❖"; FUT_C256=30; FUT_C16=36
+      FUT_QUOTEKEY=default;   FUT_TAG="Arooo!" ;;
+    cubert)
+      FUT_NAME="Cubert Farnsworth"; FUT_GLYPH="◇"; FUT_C256=75; FUT_C16=34
+      FUT_QUOTEKEY=default;   FUT_TAG="that's scientifically impossible" ;;
+    robotdevil|robot-devil)
+      FUT_NAME="The Robot Devil"; FUT_GLYPH="♆"; FUT_C256=196; FUT_C16=31
+      FUT_QUOTEKEY=default;   FUT_TAG="a deal's a deal" ;;
     *)
       # Unknown host: deterministic colour from the name so it's at least stable,
       # plus a generic New-New-York persona.

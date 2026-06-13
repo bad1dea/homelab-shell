@@ -60,6 +60,22 @@ echo '<div class="grid"><div class="card"><h3>theme: simple · every host</h3><p
 "$HERE/bin/prompt-preview" 2>/dev/null | sed -n '/fleet colour sweep/,$p' | block
 echo '</pre></div></div>'
 
+# ── Portrait gallery ─────────────────────────────────────────────────────────
+echo '<h2>Character portraits</h2>'
+echo '<p class="legend">All 18 from the sprite sheets, rendered to terminal art (chafa, truecolor). These are the per-host MOTD banners.</p>'
+echo '<div class="grid">'
+for png in "$HERE"/motd/art/portraits/*.png; do
+  name="$(basename "$png" .png)"
+  echo "<div class=\"card\"><h3>$name</h3><pre>"
+  if command -v chafa >/dev/null 2>&1; then
+    chafa --format symbols --symbols vhalf+space -c full --size 24x18 --align top,left "$png" 2>/dev/null | block
+  else
+    block < "$HERE/motd/art/$name.ans"
+  fi
+  echo "</pre></div>"
+done
+echo '</div>'
+
 # ── MOTDs ────────────────────────────────────────────────────────────────────
 echo '<h2>Message of the day (per host)</h2>'
 echo '<p class="legend">Shown on SSH login: character art, live system status, a random in-character quote.</p>'
