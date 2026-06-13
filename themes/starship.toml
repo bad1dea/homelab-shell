@@ -1,0 +1,68 @@
+# shell/themes/starship.toml — the "let a maintained engine do it" option.
+#
+# Selected when the theme is "starship" AND the starship binary is installed
+# (shell-common.sh runs `starship init bash` with STARSHIP_CONFIG pointed here).
+# Install starship with:  shell/install.sh --with-starship   (or `dnf/apt`/curl).
+#
+# Per-host flavour: shell-common exports HL_HOST_GLYPH + HL_HOST_NAME from
+# futurama.sh, surfaced below via the env_var module, so even the maintained
+# engine still tells you which character's box you're on.
+
+add_newline = true
+command_timeout = 800
+
+format = """
+[░▒▓](#1a1a2e)\
+${env_var.hlhost}\
+$username\
+$hostname\
+[](fg:#1a1a2e bg:#3b3b58)\
+$directory\
+[](fg:#3b3b58 bg:#2d4a2d)\
+$git_branch\
+$git_status\
+[](fg:#2d4a2d)\
+$cmd_duration\
+$line_break\
+$character"""
+
+[env_var.hlhost]
+variable = "HL_HOST_GLYPH"
+default = "◆"
+format = "[ $env_value ](fg:#ffcc66 bg:#1a1a2e)"
+
+[username]
+show_always = true
+style_user = "fg:#cfcfe6 bg:#1a1a2e"
+style_root = "fg:#ff5555 bg:#1a1a2e"
+format = "[$user](#cfcfe6 bg:#1a1a2e)"
+
+[hostname]
+ssh_only = false
+style = "bold fg:#ffcc66 bg:#1a1a2e"
+format = "[@$hostname ](bold fg:#ffcc66 bg:#1a1a2e)"
+
+[directory]
+style = "fg:#dfe7ff bg:#3b3b58"
+format = "[ $path ]($style)"
+truncation_length = 4
+truncate_to_repo = true
+
+[git_branch]
+symbol = " "
+style = "fg:#bff0bf bg:#2d4a2d"
+format = "[ $symbol$branch ]($style)"
+
+[git_status]
+style = "fg:#ffcc99 bg:#2d4a2d"
+format = "[$all_status$ahead_behind ]($style)"
+
+[cmd_duration]
+min_time = 2000
+style = "fg:#9a9ab0"
+format = "[  $duration ]($style)"
+
+[character]
+success_symbol = "[❯](bold #7ee787)"
+error_symbol = "[❯](bold #ff7b72)"
+vimcmd_symbol = "[❮](bold #ffcc66)"

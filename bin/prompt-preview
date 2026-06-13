@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# shell/bin/prompt-preview — see every prompt theme (and the MOTD) before you
+# commit to one. Renders each theme with live colour and sample data, plus the
+# same theme across the fleet so you can see the per-character colouring.
+#
+# Usage:
+#   shell/bin/prompt-preview            # all themes + a fleet colour sweep
+#   shell/bin/prompt-preview fancy      # just one theme, a few states
+#   shell/bin/prompt-preview --motd bender   # preview a host's MOTD
+
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$HERE/lib/futurama.sh"
+source "$HERE/lib/prompt-common.sh"
+export HOMELAB_MOTD_FORCE_COLOR=1
+
+THEMES=(simple fancy modern minimal classic)
+
+# Render a built PS1 string the way the terminal would: drop the \[ \] markers,
+# expand \u \h \w \W \n \$, keep the real SGR escapes.
+render() {
+  local ps="$1" user="$2" host="$3" path="$4"
+  ps="${ps//\\[/}"; ps="${ps//\\]/}"
+  ps="${ps//\\u/$user}"; ps="${ps//\\h/$host}"
+  ps="${ps//\\w/$path}"; ps="${ps//\\W/${path##*/}}"
+  ps="${ps//\\n/$'\n'}"; ps="${ps//\\\$/\$}"
+  printf '%s' "$ps"
+}
+
+# Stub git + ssh so previews are deterministic regardless of where this runs.
+GIT_STATE="clean"
+hl_git_info()  { case "$GIT_STATE" in dirty) REPLY="main*";; none) REPLY="";; *) REPLY="main";; esac; }
+hl_git_split() { HL_GIT_BRANCH=""; HL_GIT_DIRTY=""; case "$GIT_STATE" in
+  dirty) HL_GIT_BRANCH="main"; HL_GIT_DIRTY="*";; clean) HL_GIT_BRANCH="main";; esac; }
+hl_is_ssh()  { return 0; }
+hl_is_root() { return 1; }
+
+show_theme() { # $1 theme  $2 host  $3 path  $4 label
+  local theme="$1" host="$2" path="$3" label="$4"
+  fut_persona "$host"
+  ( source "$HERE/themes/$theme.sh"
+    HL_LAST_DURATION=""; ( exit 0 ); __hl_set_prompt
+    printf '  %-22s ' "$label"; render "$PS1" khuong "$host" "$path"; echo
+  )
+}
+
+preview_one() { # $1 theme
+  local t="$1"
+  printf '\n\033[1m── %s ──\033[0m\n' "$t"
+  GIT_STATE=clean; show_theme "$t" hermes "~/homelab" "clean, in a repo"
+  GIT_STATE=dirty; show_theme "$t" hermes "~/homelab" "dirty work-tree"
+  GIT_STATE=none;  show_theme "$t" hermes "/var/log"  "not a repo"
+  # after-error state
+  GIT_STATE=clean
+  fut_persona hermes
+  ( source "$HERE/themes/$t.sh"; ( exit 1 ); __hl_set_prompt
+    printf '  %-22s ' "after a failed cmd"; render "$PS1" khuong hermes "~/homelab"; echo )
+}
+
+if [[ "${1:-}" == "--motd" ]]; then
+  HOMELAB_MOTD_ART="${HOMELAB_MOTD_ART:-host}" \
+  HOSTNAME_OVERRIDE="${2:-bender}" bash -c \
+    "source '$HERE/lib/futurama.sh'; exec '$HERE/motd/motd.sh'" 2>/dev/null
+  exit 0
+fi
+
+if [[ -n "${1:-}" ]]; then preview_one "$1"; exit 0; fi
+
+printf '\033[1mHOMELAB SHELL — PROMPT THEMES\033[0m  (sample: khuong on a host, in ~/homelab)\n'
+for t in "${THEMES[@]}"; do preview_one "$t"; done
+
+# Fleet colour sweep: the SAME theme, every character, so the per-host colour
+# is obvious at a glance.
+printf '\n\033[1m── fleet colour sweep (theme: simple) ──\033[0m\n'
+GIT_STATE=clean
+for h in hermes bender leela fry amy nibbler professor url mom; do
+  show_theme simple "$h" "~/homelab" "$h"
+done
+
+printf '\nSwitch live with:  \033[1mhl theme <name>\033[0m   ·   preview MOTD:  \033[1mshell/bin/prompt-preview --motd <host>\033[0m\n'

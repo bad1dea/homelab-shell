@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# shell/bin/preview-html — render the prompt themes + every host's MOTD into a
+# single self-contained HTML page you can open in a browser. Great for picking
+# a theme without deploying anything.
+#
+# Usage:  shell/bin/preview-html [output.html]   (default: /tmp/homelab-shell-preview.html)
+
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OUT="${1:-/tmp/homelab-shell-preview.html}"
+A2H="python3 $HERE/bin/ansi2html.py"
+export HOMELAB_MOTD_FORCE_COLOR=1
+
+block() { $A2H; }   # stdin ANSI -> stdout HTML
+
+{
+cat <<'HEAD'
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homelab Shell — Futurama prompt &amp; MOTD gallery</title>
+<style>
+  :root{--bg:#0b0c12;--panel:#13141d;--ink:#e6e6f0;--dim:#8a8aa0;--accent:#ffcc66;}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#1a1430 0,var(--bg) 60%);
+       color:var(--ink);font:14px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif;padding:32px}
+  h1{font-size:24px;margin:0 0 4px} .sub{color:var(--dim);margin:0 0 28px}
+  h2{font-size:15px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);
+     margin:34px 0 12px;border-bottom:1px solid #2a2b3a;padding-bottom:6px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid #23243200;border:1px solid #232432;border-radius:12px;
+        overflow:hidden;box-shadow:0 8px 30px #0006}
+  .card h3{margin:0;padding:10px 14px;font-size:13px;color:var(--accent);background:#0f1018;
+           border-bottom:1px solid #232432;letter-spacing:.04em}
+  pre{margin:0;padding:14px;white-space:pre-wrap;word-break:break-word;
+      font:13px/1.55 "JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      background:#0b0c12;color:#cfd2e6}
+  .legend{color:var(--dim);font-size:13px;margin:6px 0 0}
+  code{background:#1c1d29;padding:2px 6px;border-radius:6px;color:var(--accent)}
+  footer{color:var(--dim);margin-top:40px;font-size:12px}
+</style></head><body>
+<h1>◆ Homelab Shell — prompt &amp; MOTD gallery</h1>
+<p class="sub">One source of truth in <code>shell/</code>. Bashrc sources it; a <code>git pull</code> rolls out changes fleet-wide. Each host wears its Futurama character's colour.</p>
+HEAD
+
+# ── Prompt themes ────────────────────────────────────────────────────────────
+echo '<h2>Prompt themes</h2>'
+echo '<p class="legend">Switch live with <code>hl theme &lt;name&gt;</code>. Sample shown as <code>khuong</code> on a host in <code>~/homelab</code>, with clean / dirty / no-repo / post-error states.</p>'
+echo '<div class="grid">'
+for t in simple fancy modern minimal classic; do
+  echo "<div class=\"card\"><h3>theme: $t</h3><pre>"
+  "$HERE/bin/prompt-preview" "$t" | block
+  echo "</pre></div>"
+done
+echo '</div>'
+
+# ── Fleet colour sweep ───────────────────────────────────────────────────────
+echo '<h2>Fleet colour sweep</h2>'
+echo '<p class="legend">The same theme across every host so the per-character colour is obvious.</p>'
+echo '<div class="grid"><div class="card"><h3>theme: simple · every host</h3><pre>'
+"$HERE/bin/prompt-preview" 2>/dev/null | sed -n '/fleet colour sweep/,$p' | block
+echo '</pre></div></div>'
+
+# ── MOTDs ────────────────────────────────────────────────────────────────────
+echo '<h2>Message of the day (per host)</h2>'
+echo '<p class="legend">Shown on SSH login: character art, live system status, a random in-character quote.</p>'
+echo '<div class="grid">'
+for h in hermes bender url leela fry amy nibbler professor mom; do
+  echo "<div class=\"card\"><h3>$h</h3><pre>"
+  "$HERE/motd/motd.sh" "$h" 2>/dev/null | block
+  echo "</pre></div>"
+done
+echo '</div>'
+
+cat <<FOOT
+<footer>Generated $(date '+%Y-%m-%d %H:%M %Z') · MOTD status reflects this machine.
+Art modes: <code>host</code> / <code>shuffle</code> / <code>daily</code> / <code>off</code>.</footer>
+</body></html>
+FOOT
+} > "$OUT"
+
+echo "wrote $OUT"

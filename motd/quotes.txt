@@ -1,0 +1,68 @@
+# shell/motd/quotes.txt — in-character one-liners for the MOTD.
+# Format:  <tag>|<quote>
+# The MOTD draws a random line whose tag is this host's character OR "any".
+# Add freely; blank lines and #-comments are ignored.
+
+bender|Bite my shiny metal ass.
+bender|I'm 40% titanium.
+bender|Hey sexy mama, wanna kill all humans?
+bender|This is the worst kind of discrimination: the kind against me!
+bender|I'm back, baby.
+bender|Blackmail's such an ugly word. I prefer extortion.
+bender|Of all the friends I've had, you're the first.
+bender|In your face, Carl Sagan!
+
+fry|Shut up and take my money!
+fry|I'm walking on sunshine... and don't it feel good!
+fry|Why am I sticky and naked? Did I miss something fun?
+fry|When you do things right, people won't be sure you've done anything at all.
+fry|Hey, those are the worst names I've ever heard.
+fry|Holy crap! What just happened?
+
+leela|If we hit that bullseye, the rest of the dominoes will fall like a house of cards. Checkmate.
+leela|I never had a real family. Just a crummy apartment full of robots.
+leela|Stop exploding, you cowards.
+leela|We're going to deliver this package if it kills us. And it might.
+leela|Everyone, brace yourselves.
+
+hermes|Sweet llamas of the Bahamas!
+hermes|Sweet three-toed sloth of the ice planet Hoth!
+hermes|I'm a busy man. I don't have time for jibba-jabba.
+hermes|Everything's under control. Situation normal.
+hermes|Filed in triplicate, stamped, and approved.
+
+professor|Good news, everyone!
+professor|To shreds, you say?
+professor|I've got news, everyone — terrible news.
+professor|Now, like all my great plans, it's so simple an idiot could've devised it.
+professor|Sweet zombie Jesus!
+
+amy|Spluh!
+amy|Guh! Smell ya later.
+amy|This is the worst date since the Donner party.
+amy|Ooh, shiny.
+
+nibbler|Nibblonians have watched over this galaxy since the beginning.
+nibbler|The dark ones return. We have little time.
+nibbler|All will be revealed in time, Mistress.
+
+url|You under arrest, buddy.
+url|We got a 2-15 in progress — that's a robbery.
+url|Move along, nothing to see here.
+url|Smitty, write this perp up.
+
+mom|Stupid babies need the most attention.
+mom|Now go to your room and make products!
+mom|I'm a businesswoman. I'm not gonna let some genetic anomaly tell me my business.
+mom|Crank up the desk slappin' machine!
+
+any|Good news, everyone — uptime is holding.
+any|The packets must flow.
+any|Everything is fine. Probably.
+any|It's a perfectly normal Tuesday in New New York.
+any|99% uptime is just 1% slacking.
+any|If it ain't broke, redeploy it anyway.
+any|All systems nominal. The Professor would be proud.
+any|Remember: the repo is the source of truth.
+any|Don't edit on a server. Bender's watching.
+any|Welcome to the world of tomorrow!
