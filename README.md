@@ -101,17 +101,21 @@ Art selection (`MOTD_ART` in config):
 - `daily` — changes once per day, stable within the day
 - `off` — no art
 
-**Portraits.** Each host's character has a pixel-art portrait in
-`motd/art/portraits/<host>.png` (cropped from the Futurama sprite sheets). On
-hosts with **chafa** installed (`install.sh --with-fonts`), the MOTD renders the
-PNG *live*, adapting to the terminal's size and colour depth. Everywhere else it
-uses the pre-rendered `motd/art/<host>.ans` (truecolor, baked in — zero deps).
-Re-render the `.ans` set after adding/replacing a PNG:
+**Portraits (multi-variant, shuffles on join).** Each character has *several*
+pose variants in `motd/art/portraits/<char>-NN.png` (cropped from the Futurama
+sprite sheets + individual references). In `host` mode the MOTD picks a **random
+variant of this host's character every login**; in `shuffle` mode, any character.
+On hosts with **chafa** (`install.sh --with-fonts`) the PNG renders *live*
+(terminal-adaptive); otherwise the pre-rendered `motd/art/<name>.ans` is used.
 
 ```bash
-motd/render-portraits.sh                 # all, truecolor, width 30
-motd/render-portraits.sh --colors 256 --width 24   # smaller / 256-colour
+motd/render-portraits.sh                 # (re)render every PNG -> .ans
+bin/portrait-review [out.html]           # browser gallery of all variants, labelled
+motd/art/prune <name>...                 # delete bad variant(s) (PNG + .ans)
 ```
+
+Curating is just deleting files — the shuffle globs whatever remains, no code
+changes. Add a new variant by dropping a PNG in `portraits/` and re-rendering.
 
 Drop your own art into `motd/art/`: `*.txt` is colourised to the host's colour,
 `*.ans` is printed raw (use this for real CP437/ANSI BBS art). Generate figlet

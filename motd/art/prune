@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# shell/motd/art/prune — delete portrait variant(s): removes the PNG and its
+# rendered .ans together, so a culled variant fully drops out of the MOTD shuffle.
+#
+# Usage:  ./prune url-03 url-05 bender-09 ...
+#         ./prune --list url        # show a character's variants first
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # .../shell/motd/art
+
+if [[ "${1:-}" == "--list" ]]; then
+  ls "$DIR/portraits/${2:-}"*-*.png 2>/dev/null | xargs -n1 basename | sed 's/\.png$//'
+  exit 0
+fi
+[[ $# -gt 0 ]] || { echo "usage: prune <name>... (e.g. url-03)  |  prune --list <char>"; exit 2; }
+
+for name in "$@"; do
+  name="${name%.png}"; name="${name%.ans}"
+  png="$DIR/portraits/$name.png"; ans="$DIR/$name.ans"; gone=0
+  [[ -f "$png" ]] && { rm -f "$png"; gone=1; }
+  [[ -f "$ans" ]] && { rm -f "$ans"; gone=1; }
+  if [[ $gone -eq 1 ]]; then echo "pruned $name"; else echo "not found: $name" >&2; fi
+done
+echo "Done. Commit the deletions when you're happy:  git add -A shell/motd/art && git commit"

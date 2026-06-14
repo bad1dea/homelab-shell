@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# shell/bin/portrait-review — render every portrait VARIANT to a browser gallery,
+# grouped by character, each labelled with its exact filename so you can cull the
+# bad ones. Deleting a variant is all it takes — the MOTD shuffle globs whatever
+# remains, so there's no code to touch.
+#
+# Usage:  shell/bin/portrait-review [out.html]   (default /tmp/portrait-review.html)
+#
+# To delete a bad variant (removes the PNG + its rendered .ans):
+#   shell/motd/art/prune <name>     e.g.  shell/motd/art/prune url-03
+# or just:  rm shell/motd/art/portraits/<name>.png shell/motd/art/<name>.ans
+
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OUT="${1:-/tmp/portrait-review.html}"
+A2H="python3 $HERE/bin/ansi2html.py"
+PDIR="$HERE/motd/art/portraits"
+
+# characters = unique basename prefixes (strip -NN.png)
+chars=$(ls "$PDIR"/*.png 2>/dev/null | xargs -n1 basename | sed -E 's/-[0-9]+\.png$//' | sort -u)
+
+{
+cat <<'HEAD'
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portrait variants — review &amp; cull</title>
+<style>
+ body{margin:0;background:#0b0c12;color:#e6e6f0;font:14px/1.5 system-ui,sans-serif;padding:28px}
+ h1{margin:0 0 4px} .sub{color:#8a8aa0;margin:0 0 24px}
+ h2{font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:#ffcc66;
+    margin:30px 0 6px;border-bottom:1px solid #2a2b3a;padding-bottom:6px}
+ .prune{color:#8a8aa0;font:12px ui-monospace,monospace;margin:0 0 12px}
+ code{background:#1c1d29;padding:2px 6px;border-radius:6px;color:#ff9aa2}
+ .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+ .card{background:#13141d;border:1px solid #232432;border-radius:10px;overflow:hidden}
+ .card h3{margin:0;padding:6px 10px;font:12px ui-monospace,monospace;color:#9ad;
+          background:#0f1018;border-bottom:1px solid #232432}
+ pre{margin:0;padding:8px;white-space:pre;font:11px/1.2 ui-monospace,monospace;background:#0b0c12}
+</style></head><body>
+<h1>◆ Portrait variants — review &amp; cull</h1>
+<p class="sub">Every variant the MOTD shuffle can pick, grouped by character. Note the bad ones and delete them — that's all it takes.</p>
+HEAD
+
+have_chafa=0; command -v chafa >/dev/null 2>&1 && have_chafa=1
+for ch in $chars; do
+  count=$(ls "$PDIR/$ch"-*.png 2>/dev/null | wc -l)
+  echo "<h2>$ch <span style='color:#8a8aa0;font-size:12px'>($count)</span></h2>"
+  echo "<p class=\"prune\">delete one:&nbsp; <code>shell/motd/art/prune ${ch}-NN</code></p>"
+  echo '<div class="grid">'
+  for png in "$PDIR/$ch"-*.png; do
+    [[ -f "$png" ]] || continue
+    name="$(basename "$png" .png)"
+    echo "<div class=\"card\"><h3>$name</h3><pre>"
+    if [[ $have_chafa -eq 1 ]]; then
+      chafa --format symbols --symbols vhalf+space -c full --size 20x14 "$png" 2>/dev/null | $A2H
+    else
+      $A2H < "$HERE/motd/art/$name.ans"
+    fi
+    echo "</pre></div>"
+  done
+  echo '</div>'
+done
+echo '</body></html>'
+} > "$OUT"
+echo "wrote $OUT"

@@ -53,31 +53,27 @@ if [[ -z "${HOMELAB_MOTD_ART:-}" && -f "$CONF" ]]; then
   [[ -n "$v" ]] && ART_MODE="$v"
 fi
 
+# Echo one of the given paths that actually exists. daily mode = stable per day
+# (same pick all day); otherwise random — i.e. a fresh variant every login.
+pick_one() {  # $@ = candidate paths (globs ok; non-matches are filtered)
+  local real=() f
+  for f in "$@"; do [[ -f "$f" ]] && real+=("$f"); done
+  [[ ${#real[@]} -gt 0 ]] || return 1
+  local idx
+  if [[ "$ART_MODE" == daily ]]; then idx=$(( 10#$(date +%j) % ${#real[@]} ))
+  else idx=$(( RANDOM % ${#real[@]} )); fi
+  printf '%s\n' "${real[$idx]}"
+}
+
+# Fallback chooser (no chafa / no PNG): a random .ans, then the default banner.
 pick_art() {
   local artdir="$DIR/art"
   case "$ART_MODE" in
     off) return 1 ;;
-    host)
-      # Prefer a pre-rendered colour portrait (.ans), then hand-drawn (.txt),
-      # then the default banner. (Live chafa render is handled in print_art.)
-      local ext
-      for ext in ans txt; do
-        [[ -f "$artdir/$FUT_HOST.$ext" ]] && { echo "$artdir/$FUT_HOST.$ext"; return 0; }
-      done
-      [[ -f "$artdir/planet-express.txt" ]] && { echo "$artdir/planet-express.txt"; return 0; }
-      return 1 ;;
-    shuffle|daily)
-      local files=( "$artdir"/*.txt "$artdir"/*.ans )
-      local real=(); local f; for f in "${files[@]}"; do [[ -f "$f" ]] && real+=("$f"); done
-      [[ ${#real[@]} -gt 0 ]] || return 1
-      local idx
-      if [[ "$ART_MODE" == daily ]]; then
-        idx=$(( $(date +%j) % ${#real[@]} ))
-      else
-        idx=$(( RANDOM % ${#real[@]} ))
-      fi
-      echo "${real[$idx]}"; return 0 ;;
+    host)          pick_one "$artdir/$FUT_HOST"-*.ans && return 0 ;;
+    shuffle|daily) pick_one "$artdir"/*.ans "$artdir"/*.txt && return 0 ;;
   esac
+  [[ -f "$artdir/planet-express.txt" ]] && { echo "$artdir/planet-express.txt"; return 0; }
   return 1
 }
 
@@ -96,12 +92,20 @@ chafa_render() {  # $1 = png path
 print_art() {
   [[ "$ART_MODE" == off ]] && return 0
   echo
-  # Best quality: live, terminal-adaptive portrait when chafa + a PNG are present
-  # (host mode only). If chafa is absent/too old/fails, fall through to the
-  # pre-rendered .ans (and ultimately the hand-drawn .txt) via pick_art.
-  if [[ "$ART_MODE" == host ]] && command -v chafa >/dev/null 2>&1; then
-    local png="$DIR/art/portraits/$FUT_HOST.png"
-    if [[ -f "$png" ]] && chafa_render "$png"; then echo; return 0; fi
+  # Pick a PNG variant: in 'host' mode, a random pose of THIS host's character
+  # (shuffle on join); in shuffle/daily, any character. Render it live with chafa
+  # (best quality, terminal-adaptive); if chafa is absent/old/fails, print the
+  # matching pre-rendered .ans. Only if there's no PNG at all do we hit pick_art.
+  local pool=()
+  case "$ART_MODE" in
+    host)          pool=( "$DIR/art/portraits/$FUT_HOST"-*.png ) ;;
+    shuffle|daily) pool=( "$DIR/art/portraits/"*.png ) ;;
+  esac
+  local png; png="$(pick_one "${pool[@]}")" || png=""
+  if [[ -n "$png" ]]; then
+    if command -v chafa >/dev/null 2>&1 && chafa_render "$png"; then echo; return 0; fi
+    local ans="$DIR/art/$(basename "$png" .png).ans"
+    [[ -f "$ans" ]] && { cat "$ans"; echo; return 0; }
   fi
   local f; f="$(pick_art)" || return 0
   if [[ "$f" == *.ans ]]; then
