@@ -68,7 +68,7 @@ for png in "$HERE"/motd/art/portraits/*.png; do
   name="$(basename "$png" .png)"
   echo "<div class=\"card\"><h3>$name</h3><pre>"
   if command -v chafa >/dev/null 2>&1; then
-    chafa --format symbols --symbols vhalf+space -c full --size 24x18 --align top,left "$png" 2>/dev/null | block
+    chafa --format symbols --symbols vhalf+space -c full --size 24x18 "$png" 2>/dev/null | block
   else
     block < "$HERE/motd/art/$name.ans"
   fi

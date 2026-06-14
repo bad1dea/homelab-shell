@@ -39,7 +39,7 @@ for png in "$PNGDIR"/*.png; do
     printf '%s\n' "${ONLY[@]}" | grep -qx "$name" || continue
   fi
   chafa --format symbols --symbols vhalf+space -c "$COLORS" \
-        --size "${WIDTH}x${HEIGHT}" --align top,left "$png" > "$DIR/art/$name.ans"
+        --size "${WIDTH}x${HEIGHT}" "$png" > "$DIR/art/$name.ans"
   echo "  art/$name.ans"
   count=$((count+1))
 done

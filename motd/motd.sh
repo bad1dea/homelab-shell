@@ -82,20 +82,26 @@ pick_art() {
 }
 
 # Render a character PNG live, adapting to the terminal's colour depth + size.
+# Returns non-zero (and prints nothing) if chafa is missing/too old/errors, so
+# the caller can fall back to the pre-rendered .ans. NB: --align is chafa 1.14+,
+# so it's deliberately not used here (Debian 12 ships 1.12).
 chafa_render() {  # $1 = png path
-  local depth="${HOMELAB_MOTD_COLORS:-full}" w="${HOMELAB_MOTD_ART_WIDTH:-32}"
-  chafa --format symbols --symbols vhalf+space -c "$depth" \
-        --size "${w}x26" --align top,left "$1" 2>/dev/null
+  local depth="${HOMELAB_MOTD_COLORS:-full}" w="${HOMELAB_MOTD_ART_WIDTH:-32}" out
+  out="$(chafa --format symbols --symbols vhalf+space -c "$depth" \
+               --size "${w}x26" "$1" 2>/dev/null)" || return 1
+  [[ -n "$out" ]] || return 1
+  printf '%s\n' "$out"
 }
 
 print_art() {
   [[ "$ART_MODE" == off ]] && return 0
   echo
   # Best quality: live, terminal-adaptive portrait when chafa + a PNG are present
-  # (host mode only). Everywhere else, fall back to a pre-rendered file.
+  # (host mode only). If chafa is absent/too old/fails, fall through to the
+  # pre-rendered .ans (and ultimately the hand-drawn .txt) via pick_art.
   if [[ "$ART_MODE" == host ]] && command -v chafa >/dev/null 2>&1; then
     local png="$DIR/art/portraits/$FUT_HOST.png"
-    if [[ -f "$png" ]]; then chafa_render "$png"; echo; return 0; fi
+    if [[ -f "$png" ]] && chafa_render "$png"; then echo; return 0; fi
   fi
   local f; f="$(pick_art)" || return 0
   if [[ "$f" == *.ans ]]; then
