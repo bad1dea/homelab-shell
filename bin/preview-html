@@ -62,13 +62,13 @@ echo '</pre></div></div>'
 
 # ── Portrait gallery ─────────────────────────────────────────────────────────
 echo '<h2>Character portraits</h2>'
-echo '<p class="legend">All 18 from the sprite sheets, rendered to terminal art (chafa, truecolor). These are the per-host MOTD banners.</p>'
+echo '<p class="legend">Every portrait variant, pre-cropped to square and rendered at a consistent 24x13 (chafa, truecolor). These feed the per-host MOTD banners below.</p>'
 echo '<div class="grid">'
 for png in "$HERE"/motd/art/portraits/*.png; do
   name="$(basename "$png" .png)"
   echo "<div class=\"card\"><h3>$name</h3><pre>"
   if command -v chafa >/dev/null 2>&1; then
-    chafa --format symbols --symbols vhalf+space -c full --size 24x18 "$png" 2>/dev/null | block
+    chafa --format symbols --symbols vhalf+space -c full --size 24x12 "$png" 2>/dev/null | block
   else
     block < "$HERE/motd/art/$name.ans"
   fi

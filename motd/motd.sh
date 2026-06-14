@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # shell/motd/motd.sh — the message-of-the-day, Futurama edition.
 #
-# Prints a per-host ANSI art banner, a compact system status block, and a random
-# in-character quote. Called automatically on SSH login by shell-common.sh, or
-# by hand via `hl motd`. Dependency-light: everything degrades if a tool is
-# missing (docker/zerotier optional; no figlet/lolcat required).
+# Prints a per-host ANSI art portrait next to a compact header + in-character
+# quote, then a system status block below. Called automatically on SSH login
+# by shell-common.sh, or by hand via `hl motd`. Dependency-light: everything
+# degrades if a tool is missing (docker/zerotier optional; no figlet/lolcat
+# required).
 #
 # Flags:
-#   --art-only     just the banner
+#   --art-only     just the portrait
 #   --quote-only   just the quote
-#   --no-art       skip the banner (status + quote only)
+#   --no-art       skip the portrait (status + quote only)
 #   --plain        no colour (for logs / dumb terminals)
 #
 # Art selection (config key MOTD_ART in ~/.config/homelab-shell.conf, or env
@@ -53,6 +54,14 @@ if [[ -z "${HOMELAB_MOTD_ART:-}" && -f "$CONF" ]]; then
   [[ -n "$v" ]] && ART_MODE="$v"
 fi
 
+# The portraits in art/portraits/*.png are all pre-cropped to square, so a
+# fixed chafa --size renders EVERY character at the identical 24x13 cell grid
+# — required for the side-by-side art+text layout below. The pre-rendered
+# art/*.ans files (render-portraits.sh) were generated at the same size, so
+# the chafa-less fallback lines up too.
+ART_WIDTH=24
+ART_HEIGHT=12
+
 # Echo one of the given paths that actually exists. daily mode = stable per day
 # (same pick all day); otherwise random — i.e. a fresh variant every login.
 pick_one() {  # $@ = candidate paths (globs ok; non-matches are filtered)
@@ -77,52 +86,121 @@ pick_art() {
   return 1
 }
 
-# Render a character PNG live, adapting to the terminal's colour depth + size.
+# Render a character PNG live, adapting to the terminal's colour depth.
 # Returns non-zero (and prints nothing) if chafa is missing/too old/errors, so
 # the caller can fall back to the pre-rendered .ans. NB: --align is chafa 1.14+,
 # so it's deliberately not used here (Debian 12 ships 1.12).
 chafa_render() {  # $1 = png path
-  local depth="${HOMELAB_MOTD_COLORS:-full}" w="${HOMELAB_MOTD_ART_WIDTH:-32}" out
+  local depth="${HOMELAB_MOTD_COLORS:-full}" out
   out="$(chafa --format symbols --symbols vhalf+space -c "$depth" \
-               --size "${w}x26" "$1" 2>/dev/null)" || return 1
+               --size "${ART_WIDTH}x${ART_HEIGHT}" "$1" 2>/dev/null)" || return 1
   [[ -n "$out" ]] || return 1
   printf '%s\n' "$out"
 }
 
-print_art() {
+# Populate ART_RAW with the chosen art's raw (possibly ANSI-coloured) text, or
+# leave it empty if ART_MODE=off / nothing is available. ART_IS_PORTRAIT=true
+# when the result is one of the 24x13 portrait grids (so the caller can lay it
+# out side-by-side with text); false for the rare wide-banner fallback.
+load_art() {
+  ART_RAW=""; ART_IS_PORTRAIT=false
   [[ "$ART_MODE" == off ]] && return 0
-  echo
-  # Pick a PNG variant: in 'host' mode, a random pose of THIS host's character
-  # (shuffle on join); in shuffle/daily, any character. Render it live with chafa
-  # (best quality, terminal-adaptive); if chafa is absent/old/fails, print the
-  # matching pre-rendered .ans. Only if there's no PNG at all do we hit pick_art.
+
   local pool=()
   case "$ART_MODE" in
     host)          pool=( "$DIR/art/portraits/$FUT_HOST"-*.png ) ;;
     shuffle|daily) pool=( "$DIR/art/portraits/"*.png ) ;;
   esac
-  local png; png="$(pick_one "${pool[@]}")" || png=""
+  local png; png="$(pick_one "${pool[@]}" 2>/dev/null)" || png=""
   if [[ -n "$png" ]]; then
-    if command -v chafa >/dev/null 2>&1 && chafa_render "$png"; then echo; return 0; fi
-    local ans="$DIR/art/$(basename "$png" .png).ans"
-    [[ -f "$ans" ]] && { cat "$ans"; echo; return 0; }
+    if command -v chafa >/dev/null 2>&1; then ART_RAW="$(chafa_render "$png")" || ART_RAW=""; fi
+    if [[ -z "$ART_RAW" ]]; then
+      local ans="$DIR/art/$(basename "$png" .png).ans"
+      [[ -f "$ans" ]] && ART_RAW="$(cat "$ans")"
+    fi
+    [[ -n "$ART_RAW" ]] && { ART_IS_PORTRAIT=true; ART_RAW="${ART_RAW//$'\033[?25l'/}"; return 0; }
   fi
+
   local f; f="$(pick_art)" || return 0
   if [[ "$f" == *.ans ]]; then
-    cat "$f"                                   # pre-coloured: print raw
+    ART_RAW="$(cat "$f")"
+    ART_RAW="${ART_RAW//$'\033[?25l'/}"
   elif command -v lolcat >/dev/null 2>&1 && [[ "${HOMELAB_MOTD_LOLCAT:-}" == 1 ]]; then
-    lolcat -f "$f"                             # ASCII art, rainbow
+    ART_RAW="$(lolcat -f < "$f")"
   else
-    printf '%s' "$HCOL"; cat "$f"; printf '%s' "$RST"   # ASCII art, character tint
+    ART_RAW="$(printf '%s' "$HCOL"; cat "$f"; printf '%s' "$RST")"
   fi
+}
+
+print_art() {
+  load_art
+  [[ -n "$ART_RAW" ]] || return 0
+  echo
+  printf '%s\n' "$ART_RAW"
   echo
 }
 
-print_header() {
+# ── quote ─────────────────────────────────────────────────────────────────────
+pick_quote() {
+  local qf="$DIR/quotes.txt"
+  [[ -r "$qf" ]] || return 0
+  # lines tagged with this character OR "any"
+  local lines; mapfile -t lines < <(grep -vE '^\s*#|^\s*$' "$qf" | grep -E "^(${FUT_QUOTEKEY}|any)\|")
+  [[ ${#lines[@]} -gt 0 ]] || mapfile -t lines < <(grep -vE '^\s*#|^\s*$' "$qf" | grep -E '^any\|')
+  [[ ${#lines[@]} -gt 0 ]] || return 0
+  local pick="${lines[$(( RANDOM % ${#lines[@]} ))]}"
+  printf '%s\n' "${pick#*|}"
+}
+
+random_quote() {
+  local q; q="$(pick_quote)"
+  [[ -n "$q" ]] && printf '\n%s“%s”%s\n' "$HCOL" "$q" "$RST"
+}
+
+# ── art + header + quote, side by side ──────────────────────────────────────
+print_banner() {
+  load_art
   local now; now="$(date '+%a %Y-%m-%d %H:%M %Z')"
-  printf '%s %s%s%s  —  %s%s%s\n' \
-    "$HCOL$FUT_GLYPH$RST" "$HCOL" "$FUT_HOST" "$RST" "$DIM" "$FUT_NAME" "$RST"
-  printf '%s%s · %s%s\n' "$DIM" "$FUT_TAG" "$now" "$RST"
+
+  local text=()
+  text+=("$HCOL$FUT_GLYPH$RST  $HCOL$FUT_HOST$RST  $DIM—$RST  $FUT_NAME")
+  text+=("$DIM$FUT_TAG  ·  $now$RST")
+  local q; q="$(pick_quote)"
+  if [[ -n "$q" ]]; then
+    text+=("")
+    local wrapped; mapfile -t wrapped < <(fold -s -w 44 <<< "$q")
+    local last=$(( ${#wrapped[@]} - 1 )) i
+    for i in "${!wrapped[@]}"; do
+      local l="${wrapped[$i]}"
+      [[ $i -eq 0 ]] && l="“$l"
+      [[ $i -eq $last ]] && l="$l”"
+      text+=("$HCOL$l$RST")
+    done
+  fi
+
+  if [[ "$ART_IS_PORTRAIT" != true ]]; then
+    # Rare fallback (no portrait available at all): old stacked layout.
+    [[ -n "$ART_RAW" ]] && { echo; printf '%s\n' "$ART_RAW"; }
+    echo
+    local line; for line in "${text[@]}"; do printf '%s\n' "$line"; done
+    return 0
+  fi
+
+  local art_lines=()
+  [[ -n "$ART_RAW" ]] && mapfile -t art_lines <<< "$ART_RAW"
+  local pad; pad="$(printf '%*s' "$ART_WIDTH" '')"
+
+  # Vertically centre the (shorter) text block alongside the portrait.
+  local n=${#art_lines[@]} m=${#text[@]}
+  local offset=0; (( n > m )) && offset=$(( (n - m) / 2 ))
+  local total=$(( n > m ? n : m )) i
+  echo
+  for (( i=0; i<total; i++ )); do
+    local t=""; local ti=$(( i - offset ))
+    (( ti >= 0 && ti < m )) && t="${text[$ti]}"
+    printf '%s  %s\n' "${art_lines[$i]:-$pad}" "$t"
+  done
+  echo
 }
 
 # ── system status ────────────────────────────────────────────────────────────
@@ -201,26 +279,20 @@ collect_status() {
   fi
 }
 
-random_quote() {
-  local qf="$DIR/quotes.txt"
-  [[ -r "$qf" ]] || return 0
-  # lines tagged with this character OR "any"
-  local lines; mapfile -t lines < <(grep -vE '^\s*#|^\s*$' "$qf" | grep -E "^(${FUT_QUOTEKEY}|any)\|")
-  [[ ${#lines[@]} -gt 0 ]] || mapfile -t lines < <(grep -vE '^\s*#|^\s*$' "$qf" | grep -E '^any\|')
-  [[ ${#lines[@]} -gt 0 ]] || return 0
-  local pick="${lines[$(( RANDOM % ${#lines[@]} ))]}"
-  printf '\n%s“%s”%s\n' "$HCOL" "${pick#*|}" "$RST"
-}
-
 rule() { printf '%s%s%s\n' "$DIM" "────────────────────────────────────────────────────────" "$RST"; }
 
 # ── compose output ───────────────────────────────────────────────────────────
 if $ART_ONLY; then print_art; exit 0; fi
 if $QUOTE_ONLY; then random_quote; exit 0; fi
 
-$NO_ART || print_art
-print_header
+if $NO_ART; then
+  printf '%s %s%s%s  —  %s%s%s\n' \
+    "$HCOL$FUT_GLYPH$RST" "$HCOL" "$FUT_HOST" "$RST" "$DIM" "$FUT_NAME" "$RST"
+  printf '%s%s · %s%s\n' "$DIM" "$FUT_TAG" "$(date '+%a %Y-%m-%d %H:%M %Z')" "$RST"
+  random_quote
+else
+  print_banner
+fi
 rule
 collect_status
-random_quote
 echo
