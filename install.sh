@@ -66,6 +66,11 @@ strip_block
 } >> "$BASHRC"
 echo "✔ hooked $BASHRC -> $COMMON"
 
+# Suppress the login "Last login: ..." / mail notice lines (user-level; honoured
+# by pam_lastlog). The distro /etc/motd banner needs root — deploy-shell.sh
+# handles that fleet-wide.
+touch "$HOME/.hushlogin"
+
 # ── 2. config ────────────────────────────────────────────────────────────────
 CONF="$HOME/.config/homelab-shell.conf"
 mkdir -p "$(dirname "$CONF")"
