@@ -59,8 +59,21 @@ fi
 # — required for the side-by-side art+text layout below. The pre-rendered
 # art/*.ans files (render-portraits.sh) were generated at the same size, so
 # the chafa-less fallback lines up too.
-ART_WIDTH=36
-ART_HEIGHT=18
+MAX_ART_WIDTH=36
+
+# Shrink the art (live chafa render only — the .ans fallback is fixed at
+# 36x18, see load_art) so art + gap + text fits the actual terminal. Without
+# this, a narrow SSH terminal (e.g. 80 cols) wraps each combined line and the
+# text ends up below the portrait instead of beside it.
+COLS="${COLUMNS:-}"
+[[ -z "$COLS" ]] && COLS="$(tput cols 2>/dev/null)"
+[[ -z "$COLS" || "$COLS" -lt 1 ]] && COLS=80
+GAP=2
+MIN_TEXT_WIDTH=24
+ART_WIDTH=$(( COLS - GAP - 40 ))
+(( ART_WIDTH > MAX_ART_WIDTH )) && ART_WIDTH=$MAX_ART_WIDTH
+(( ART_WIDTH < 16 )) && ART_WIDTH=16
+ART_HEIGHT=$(( ART_WIDTH / 2 ))
 
 # Echo one of the given paths that actually exists. daily mode = stable per day
 # (same pick all day); otherwise random — i.e. a fresh variant every login.
@@ -116,7 +129,9 @@ load_art() {
     if command -v chafa >/dev/null 2>&1; then ART_RAW="$(chafa_render "$png")" || ART_RAW=""; fi
     if [[ -z "$ART_RAW" ]]; then
       local ans="$DIR/art/$(basename "$png" .png).ans"
-      [[ -f "$ans" ]] && ART_RAW="$(cat "$ans")"
+      # .ans files are pre-rendered at the fixed 36x18 size, not the
+      # terminal-adapted ART_WIDTH/ART_HEIGHT — line layout below must match.
+      if [[ -f "$ans" ]]; then ART_RAW="$(cat "$ans")"; ART_WIDTH=36; ART_HEIGHT=18; fi
     fi
     [[ -n "$ART_RAW" ]] && { ART_IS_PORTRAIT=true; ART_RAW="${ART_RAW//$'\033[?25l'/}"; return 0; }
   fi
@@ -162,13 +177,20 @@ print_banner() {
   load_art
   local now; now="$(date '+%a %Y-%m-%d %H:%M %Z')"
 
+  # Text column width: whatever's left after the art + gap, but not so
+  # narrow it's unreadable — fall back to the old stacked layout below that.
+  local text_width=$(( COLS - ART_WIDTH - GAP ))
+  local side_by_side=true
+  (( text_width < MIN_TEXT_WIDTH )) && side_by_side=false
+  (( text_width > 56 )) && text_width=56
+
   local text=()
   text+=("$HCOL$FUT_GLYPH$RST  $HCOL$FUT_HOST$RST  $DIM—$RST  $FUT_NAME")
   text+=("$DIM$FUT_TAG  ·  $now$RST")
   local q; q="$(pick_quote)"
   if [[ -n "$q" ]]; then
     text+=("")
-    local wrapped; mapfile -t wrapped < <(fold -s -w 56 <<< "$q")
+    local wrapped; mapfile -t wrapped < <(fold -s -w "$text_width" <<< "$q")
     local last=$(( ${#wrapped[@]} - 1 )) i
     for i in "${!wrapped[@]}"; do
       local l="${wrapped[$i]}"
@@ -178,8 +200,9 @@ print_banner() {
     done
   fi
 
-  if [[ "$ART_IS_PORTRAIT" != true ]]; then
-    # Rare fallback (no portrait available at all): old stacked layout.
+  if [[ "$ART_IS_PORTRAIT" != true || "$side_by_side" != true ]]; then
+    # No portrait, or the terminal's too narrow for side-by-side: old
+    # stacked layout (art above, text below).
     [[ -n "$ART_RAW" ]] && { echo; printf '%s\n' "$ART_RAW"; }
     echo
     local line; for line in "${text[@]}"; do printf '%s\n' "$line"; done
