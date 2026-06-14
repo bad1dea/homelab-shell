@@ -73,7 +73,7 @@ fut_persona() {
       FUT_NAME="Professor Farnsworth"; FUT_GLYPH="⚗"; FUT_C256=75; FUT_C16=34
       FUT_QUOTEKEY=professor; FUT_TAG="good news, everyone" ;;
     url)
-      FUT_NAME="URL"; FUT_GLYPH="▮"; FUT_C256=33; FUT_C16=34
+      FUT_NAME="URL"; FUT_GLYPH="✦"; FUT_C256=33; FUT_C16=34
       FUT_QUOTEKEY=url;       FUT_TAG="the law" ;;
     mom)
       FUT_NAME="Mom"; FUT_GLYPH="✸"; FUT_C256=196; FUT_C16=31
