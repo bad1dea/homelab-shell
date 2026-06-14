@@ -34,6 +34,8 @@ cat <<'HEAD'
   pre{margin:0;padding:14px;white-space:pre-wrap;word-break:break-word;
       font:13px/1.55 "JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       background:#0b0c12;color:#cfd2e6}
+  .grid.wide{grid-template-columns:repeat(auto-fill,minmax(820px,1fr))}
+  .grid.wide pre{white-space:pre;overflow-x:auto}
   .legend{color:var(--dim);font-size:13px;margin:6px 0 0}
   code{background:#1c1d29;padding:2px 6px;border-radius:6px;color:var(--accent)}
   footer{color:var(--dim);margin-top:40px;font-size:12px}
@@ -62,13 +64,13 @@ echo '</pre></div></div>'
 
 # ── Portrait gallery ─────────────────────────────────────────────────────────
 echo '<h2>Character portraits</h2>'
-echo '<p class="legend">Every portrait variant, pre-cropped to square and rendered at a consistent 24x13 (chafa, truecolor). These feed the per-host MOTD banners below.</p>'
+echo '<p class="legend">Every portrait variant, pre-cropped to square and rendered at a consistent 36x19 (chafa, truecolor). These feed the per-host MOTD banners below.</p>'
 echo '<div class="grid">'
 for png in "$HERE"/motd/art/portraits/*.png; do
   name="$(basename "$png" .png)"
   echo "<div class=\"card\"><h3>$name</h3><pre>"
   if command -v chafa >/dev/null 2>&1; then
-    chafa --format symbols --symbols vhalf+space -c full --size 24x12 "$png" 2>/dev/null | block
+    chafa --format symbols --symbols vhalf+space -c full --size 36x18 "$png" 2>/dev/null | block
   else
     block < "$HERE/motd/art/$name.ans"
   fi
@@ -78,8 +80,8 @@ echo '</div>'
 
 # ── MOTDs ────────────────────────────────────────────────────────────────────
 echo '<h2>Message of the day (per host)</h2>'
-echo '<p class="legend">Shown on SSH login: character art, live system status, a random in-character quote.</p>'
-echo '<div class="grid">'
+echo '<p class="legend">Shown on SSH login: character art, live system status, a random in-character quote. Cards are wide (the banner is ~90 columns) — scroll horizontally on narrow screens.</p>'
+echo '<div class="grid wide">'
 for h in hermes bender url leela fry amy nibbler professor mom; do
   echo "<div class=\"card\"><h3>$h</h3><pre>"
   "$HERE/motd/motd.sh" "$h" 2>/dev/null | block

@@ -10,11 +10,11 @@
 # Needs chafa (sudo dnf/apt install chafa, or shell/install.sh --with-fonts).
 #
 # All portraits/*.png are pre-cropped to square, so a fixed --size renders
-# every character at the IDENTICAL output size (24x13) — required for the
+# every character at the IDENTICAL output size (36x19) — required for the
 # side-by-side art+text layout in motd.sh.
 #
 # Usage:
-#   ./render-portraits.sh                 # all PNGs -> .ans (truecolor, 24x12)
+#   ./render-portraits.sh                 # all PNGs -> .ans (truecolor, 36x18)
 #   ./render-portraits.sh --width 24      # narrower
 #   ./render-portraits.sh --colors 256    # 256-colour instead of truecolor
 #   ./render-portraits.sh bender fry       # only these
@@ -22,7 +22,7 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PNGDIR="$DIR/art/portraits"
-WIDTH=24; HEIGHT=12; COLORS=full; ONLY=()
+WIDTH=36; HEIGHT=18; COLORS=full; ONLY=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --width) WIDTH="$2"; shift 2 ;;

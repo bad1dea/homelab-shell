@@ -55,12 +55,12 @@ if [[ -z "${HOMELAB_MOTD_ART:-}" && -f "$CONF" ]]; then
 fi
 
 # The portraits in art/portraits/*.png are all pre-cropped to square, so a
-# fixed chafa --size renders EVERY character at the identical 24x13 cell grid
+# fixed chafa --size renders EVERY character at the identical 36x19 cell grid
 # — required for the side-by-side art+text layout below. The pre-rendered
 # art/*.ans files (render-portraits.sh) were generated at the same size, so
 # the chafa-less fallback lines up too.
-ART_WIDTH=24
-ART_HEIGHT=12
+ART_WIDTH=36
+ART_HEIGHT=18
 
 # Echo one of the given paths that actually exists. daily mode = stable per day
 # (same pick all day); otherwise random — i.e. a fresh variant every login.
@@ -168,7 +168,7 @@ print_banner() {
   local q; q="$(pick_quote)"
   if [[ -n "$q" ]]; then
     text+=("")
-    local wrapped; mapfile -t wrapped < <(fold -s -w 44 <<< "$q")
+    local wrapped; mapfile -t wrapped < <(fold -s -w 56 <<< "$q")
     local last=$(( ${#wrapped[@]} - 1 )) i
     for i in "${!wrapped[@]}"; do
       local l="${wrapped[$i]}"
