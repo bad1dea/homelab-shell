@@ -1,17 +1,36 @@
-# shell/ — one prompt + MOTD for the whole fleet (Futurama edition)
+# homelab-shell — one prompt + MOTD for the whole fleet (Futurama edition)
 
-A single, GitOps-managed shell experience for **every box** — servers (hermes,
-bender, url, nibbler, professor), the Proxmox hypervisor (mom), and the clients
-(fry, leela, amy). Pick a prompt theme once; it looks the same everywhere, and
-each host wears its **Futurama character's colour** so you always know where you
-are. SSH logins get a themed MOTD with live system status.
+A single shell experience for **every box** — servers, a Proxmox hypervisor,
+and laptops/desktops. Pick a prompt theme once; it looks the same everywhere,
+and each host wears its **Futurama character's colour** so you always know
+where you are. SSH logins get a themed MOTD with live system status.
 
 The whole point: **you don't hand-maintain dotfiles per box.** `~/.bashrc`
-sources one file from this repo. A `git pull` — which the fleet already does via
-`sync-hosts.sh` — is the update mechanism. Edit here, commit, push, done.
+sources one file from this repo. A `git pull` is the update mechanism — edit
+here, commit, push, `git pull` everywhere, done.
+
+This is a standalone extract of the `shell/` directory from the private
+[homelab](https://github.com/bad1dea/homelab) repo, so any machine (including
+clients that don't have fleet SSH access or secrets) can install it with
+nothing but this repo.
+
+## Install on a new machine
+
+```bash
+git clone https://github.com/bad1dea/homelab-shell.git ~/.homelab-shell
+~/.homelab-shell/install.sh --theme fancy   # also: simple|modern|minimal|classic|starship
+# new shell, or:  source ~/.homelab-shell/shell-common.sh
+```
+
+**From your laptop, over SSH** (key auth, falls back to password):
+
+```bash
+./deploy-client.sh khuong@fry.local
+./deploy-client.sh --motd always --art shuffle khuong@leela.local
+```
 
 ```
-shell/
+./
   shell-common.sh        # THE entrypoint bashrc sources; picks theme, prints MOTD
   install.sh             # wire it into one account (idempotent)
   lib/
@@ -34,33 +53,22 @@ shell/
     ansi2html.py         # ANSI→HTML (used by preview-html)
 ```
 
-## Quick start
-
-**See the options first** (no install, real colour):
+## Try before installing
 
 ```bash
-shell/bin/prompt-preview              # all themes in your terminal
-shell/bin/preview-html ~/preview.html # a browser gallery (themes + every MOTD)
-shell/bin/prompt-preview --motd bender
+bin/prompt-preview              # all themes in your terminal
+bin/preview-html ~/preview.html # a browser gallery (themes + every MOTD)
+bin/prompt-preview --motd bender
 ```
 
-**Install on this machine:**
+After installing, updates are just `git pull` in `~/.homelab-shell` (or
+`./deploy-client.sh` again, which pulls for you) — edit here, commit, push,
+pull everywhere, done.
 
-```bash
-shell/install.sh --theme fancy          # default; also: simple|modern|minimal|classic|starship
-# new shell, or:  source shell/shell-common.sh
-```
-
-**Roll out to the whole fleet** (from your laptop):
-
-```bash
-./scripts/deploy-shell.sh                 # every host, theme=fancy
-./scripts/deploy-shell.sh --theme modern --root   # also theme each host's root shell
-```
-
-After that, updates are automatic: edit `shell/`, commit, push, and the next
-`sync-hosts.sh` (git pull) makes it live. (The hypervisor has no repo, so re-run
-`deploy-shell.sh` to update it — it gets `shell/` rsync'd to `/opt/homelab-shell`.)
+> The main [homelab](https://github.com/bad1dea/homelab) repo's fleet servers
+> get this same `shell/` directory via `scripts/deploy-shell.sh` /
+> `sync-hosts.sh` — this repo is just the client-friendly extract, kept in
+> sync by hand for now.
 
 ## In-shell control: `hl`
 
